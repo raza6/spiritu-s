@@ -1,0 +1,21 @@
+<style>
+  .sentence-wrapper {
+    display: flex;
+    width: 100%;
+    gap: 56px;
+    margin-bottom: 64px;
+  }
+</style>
+
+<h1>Spirituös</h1>
+<hr />
+<div class="sentence-wrapper">
+  <div>
+    <p><strong>{{ sentence.german }}</strong></p>
+    <p>{{ sentence.english }}</p>
+  </div>
+  <audio controls src="{{ sentence.audio }}"></audio>
+</div>
+<div hx-get="/analyzis/{{ sentence.urlEncoded }}" hx-trigger="load" >
+  <div aria-busy="true"></div>
+</div>
