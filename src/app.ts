@@ -1,12 +1,19 @@
 import express from 'express';
 import { engine } from 'express-handlebars';
 import Handlebars from 'handlebars';
+import { JSONFilePreset } from 'lowdb/node';
+import { Low } from 'lowdb';
 import path from 'path';
 import { getRandomSentence } from './services/tatoebaConnector';
 import { analyzeSentence } from './services/satzklarConnector';
 import { AnalysisComponent } from './types/analyzis';
+import { FullVM } from './types/display';
 const app = express();
 const port = 3000;
+
+let db: Low<{ sentences: FullVM[]}>;
+let lastSentence: FullVM;
+initDb();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -60,24 +67,40 @@ Handlebars.registerHelper('soloWord', function(word: string, options) {
 });
 
 Handlebars.registerHelper('uncapitalize', function(element: AnalysisComponent): string {
-  if (element.component !== 'Substantiv') {
-    return element.word[0].toLowerCase() + element.word.slice(1);
-  } else {
+  if (
+    element.component === 'Substantiv' || 
+    (element.children?.length === 1 && element.word === element.children?.[0]?.word && element.children?.[0]?.component === 'Substantiv')
+  ) {
     return element.word;
+  } else {
+    return element.word[0].toLowerCase() + element.word.slice(1);
   }
 });
+
+Handlebars.registerHelper('urlEncoded', function(str: string): string {
+  return encodeURI(str);
+});
+
+async function initDb() {
+  const defaultData = { sentences: [] };
+  db = await JSONFilePreset(path.join(__dirname, 'db.json'), defaultData);
+}
 
 app.get('/', async (req, res) => {
   try {
     const sentence = await getRandomSentence();
-  
-    res.render('home', { 
+
+    lastSentence = {
       sentence: {
         german: sentence.text,
         english: sentence.translations.filter(t => t.lang === 'eng')[0].text,
-        audio: sentence.audios[0].download_url,
-        urlEncoded: encodeURI(sentence.text)
-      }
+        audio: sentence.audios[0].download_url
+      },
+      analyzis: undefined
+    }
+  
+    res.render('home', { 
+      sentence: lastSentence.sentence
     });
   } catch {
     res.send("oops");
@@ -95,21 +118,30 @@ app.get('/analyzis/:sentence', async (req, res) => {
     .filter((v, i, self) => {
       return self.findIndex(vv => vv.type === v.type) === i;
     });
+
+    lastSentence.analyzis = {
+      structure: analyzisCore.structure,
+      wordOrder: analyzisCore.wordOrder,
+      caseUsage: analyzisCore.caseUsage,
+      explanation: analyzisCore.pragmatics.explanation,
+      tree: analyzisTree.children,
+      references
+    };
   
     res.render('analyzis', {
       layout: false,
-      analyzis: {
-        structure: analyzisCore.structure,
-        wordOrder: analyzisCore.wordOrder,
-        caseUsage: analyzisCore.caseUsage,
-        explanation: analyzisCore.pragmatics.explanation,
-        tree: analyzisTree.children,
-        references
-      }
+      analyzis: lastSentence.analyzis
     });
   } catch {
     res.send("oops");
   }
+});
+
+app.post('/save', async (req, res) => {
+  if (lastSentence !== undefined && !db.data.sentences.some(s => s.sentence.german === lastSentence.sentence.german)) {
+    await db.update(({ sentences }) => sentences.push(lastSentence));
+  }
+  return res.sendStatus(200);
 });
 
 function flattenToReferences(tree: AnalysisComponent[], ref = []): {type: string, ref: string}[] {
