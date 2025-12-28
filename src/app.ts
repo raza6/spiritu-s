@@ -69,6 +69,7 @@ async function initDb() {
 
 app.get('/', async (req, res) => {
   try {
+    console.log('🫡 generate sentence');
     const sentence = await getRandomSentence();
 
     const currentFull = {
@@ -122,6 +123,7 @@ app.get('/saved/:id', async (req, res) => {
 
 app.get('/analyzis/:sentence', async (req, res) => {
   try {
+    console.log('🫡 generate analyzis');
     const analyzis = await analyzeSentence(req.params.sentence);
   
     const analyzisCore = analyzis.data.output.component.analysis;
@@ -147,7 +149,8 @@ app.get('/analyzis/:sentence', async (req, res) => {
       layout: false,
       analyzis: currentFull.analyzis
     });
-  } catch {
+  } catch (e) {
+    console.log('Error analyzis', e);
     res.send("oops");
   }
 });
