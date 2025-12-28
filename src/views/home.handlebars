@@ -9,14 +9,16 @@
   .sentence-wrapper {
     display: flex;
     flex-wrap: wrap;
+    column-gap: 56px;
   }
 
   .button-wrapper {
     width: 106px;
   }
 
-  audio {
-    margin-left: 56px;
+  h1 a, .button-wrapper a {
+    text-decoration: none;
+    color: inherit;
   }
 
   article {
@@ -26,6 +28,7 @@
   .tree-root {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 16px;
   }
 
@@ -88,7 +91,7 @@
   }
 </style>
 
-<h1>Spirituös</h1>
+<h1><a href="/">Spirituös</a></h1>
 <hr />
 <div class="top-wrapper">
   <div class="sentence-wrapper">
@@ -99,26 +102,61 @@
     <audio controls src="{{ sentence.audio }}"></audio>
   </div>
   <div class="button-wrapper">
-    <button class="icon" title="Previous">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-      </svg>
-    </button>
+    {{#if hasPrevious}}
+    <a href="/saved/{{previous}}">
+      <button class="icon" title="Previous">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+        </svg>
+      </button>
+    </a>
+    {{/if}}
+    {{#if saveable}}
     <button class="icon" id="save" title="Save" hx-post="/save/{{ sentence.urlEncoded }}" hx-swap="none">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75h1.5m9 0h-9" />
       </svg>
     </button>
-    <button class="icon" title="Next">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-      </svg>
-    </button>
+    {{/if}}
+    {{#if hasNext}}
+    <a href="/saved/{{next}}">
+      <button class="icon" title="Next">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+      </button>
+    </a>
+    {{/if}}
   </div>
 </div>
-<div hx-get="/analyzis/{{ urlEncoded sentence.german }}" hx-trigger="load" >
-  <div aria-busy="true"></div>
-</div>
+{{#if analyzis}}
+  <div class="tree-root">
+    {{#each analyzis.tree}}
+      {{>sentencePart part=.}}
+    {{/each}}
+  </div>
+  <article>
+    <details name="remark">
+      <summary>Remark</summary>
+      <p>{{analyzis.structure}}</p>
+      <p>{{analyzis.wordOrder}}</p>
+      <p>{{analyzis.caseUsage}}</p>
+      <p>{{analyzis.explanation}}</p>
+      <br />
+      <ul>
+        {{#each analyzis.references}}
+        <li>
+          <a href="{{this.ref}}">{{this.type}}</a>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+  </article>
+{{else}}
+  <div hx-get="/analyzis/{{ urlEncoded sentence.german }}" hx-trigger="load" >
+    <div aria-busy="true"></div>
+  </div>
+{{/if}}
 
 <script>
   const saveButton =document.getElementById('save');

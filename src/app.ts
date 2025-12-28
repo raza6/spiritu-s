@@ -8,6 +8,7 @@ import { getRandomSentence } from './services/tatoebaConnector';
 import { analyzeSentence } from './services/satzklarConnector';
 import { AnalysisComponent } from './types/analyzis';
 import { FullVM } from './types/display';
+import { nextTick } from 'process';
 const app = express();
 const port = 3000;
 
@@ -100,7 +101,38 @@ app.get('/', async (req, res) => {
     }
   
     res.render('home', { 
-      sentence: lastSentence.sentence
+      sentence: lastSentence.sentence,
+      saveable: true,
+      hasPrevious: false,
+      hasNext: true,
+      next: 0
+    });
+  } catch {
+    res.send("oops");
+  }
+});
+
+app.get('/saved/:id', async (req, res) => {
+  try {
+    const currentId = parseInt(req.params.id, 10);
+    const full = db.data.sentences[currentId];
+    if (full === undefined) {
+      res.send('oops');
+    }
+
+    const hasPrevious = currentId > 0;
+    const previous = hasPrevious ? currentId-1 : undefined;
+    const hasNext = currentId < db.data.sentences.length-1;
+    const next = hasNext ? currentId+1 : undefined;
+  
+    res.render('home', { 
+      sentence: full.sentence,
+      analyzis: full.analyzis,
+      saveable: false,
+      hasPrevious,
+      previous,
+      hasNext,
+      next
     });
   } catch {
     res.send("oops");
