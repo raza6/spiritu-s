@@ -87,7 +87,8 @@ app.get('/', async (req, res) => {
       hasNext: true,
       next: 0
     });
-  } catch {
+  } catch (e) {
+    console.log('Error generating sentence', e);
     res.send("oops");
   }
 });
